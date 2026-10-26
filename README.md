@@ -21,8 +21,8 @@ It did catch the licence that time (AGPL into a closed project). Nothing made it
 3. Settles the licence route before looking at a single feature: copy with notice, or ideas only.
 4. Hands the reading to a subagent, so the other project's code never lands in your main session. The subagent writes a report around a feature matrix where every row cites a file and line on both sides. "We already have this" has to point at the code. "We don't" has to say what was searched.
 5. Shows you the ranked TAKE list and waits. Nothing is planned until you choose.
-6. Plans one task per chosen feature and builds them in order, reviewing each before the next.
-7. Deletes the clone or extraction as soon as the report exists. A daily sweep removes anything a crashed run left behind.
+6. Plans one task per chosen feature and builds them in a separate branch, one at a time, reviewing each before the next. Tasks on the ideas-only route are checked for lines copied verbatim from the other project.
+7. Deletes the clone or extraction as soon as the report exists. Each new run first clears anything an earlier run left behind.
 
 ## Two routes
 
@@ -80,22 +80,12 @@ Tested against:
 git clone https://github.com/VenTheZone/pullstack.git ~/.agents/skills/pullstack
 ```
 
-Harnesses that read `~/.agents/skills` pick it up from there. For a harness with its own skills folder, link it in:
-
-```bash
-ln -s ~/.agents/skills/pullstack <your harness's skills folder>/pullstack
-```
+Many agents read skills from `~/.agents/skills`. If yours uses a different folder, clone into that one instead. The skill is self-contained and needs no other skills.
 
 ### Requirements
 
 - `git` and `python3`
-- For the no-repo route: Docker with the gVisor `runsc` runtime ([install guide](https://gvisor.dev/docs/user_guide/install)). The sandbox image (`pullstack-sandbox:1`, about 950 MB) builds itself on first use.
-- Optional, Linux with systemd: the daily cleanup sweep.
-
-```bash
-mkdir -p ~/.config/user-tmpfiles.d
-ln -s ~/.agents/skills/pullstack/pullstack.tmpfiles.conf ~/.config/user-tmpfiles.d/pullstack.conf
-```
+- For the no-repo route: Docker with the gVisor `runsc` runtime ([install guide](https://gvisor.dev/docs/user_guide/install)). gVisor runs on Linux hosts only, so on other systems the repo route works and the no-repo route stops with a message. The sandbox image (`pullstack-sandbox:1`, about 950 MB) builds itself on first use.
 
 ## Usage
 
@@ -103,7 +93,7 @@ Ask your agent in plain words:
 
 ```
 pullstack https://github.com/owner/project
-take the notification features from /usr/lib/someapp/resources/app.asar
+take the notification features from path/to/SomeApp/resources/app.asar
 what does owner/project have that we don't?
 ```
 
@@ -115,10 +105,10 @@ Work happens in `~/.cache/pullstack/work/`, and reports land in `~/.cache/pullst
 |---|---|
 | `SKILL.md` | The skill: steps, licence routes, dissection brief, common mistakes |
 | `artifact-route.md` | The no-repo method, read only by the dissection subagent |
+| `build.md` | Plan format, build loop with per-task review, and the copy check |
 | `sandbox.sh` | Runs one extraction command in the gVisor container |
 | `Dockerfile` | The sandbox image: unzip, 7z, UPX (checksum-pinned), binutils, `ilspycmd`, `pyinstxtractor-ng` |
 | `unpack.py` | Standard-library extractor for `app.asar` and source maps; refuses any path that would land outside the output folder |
-| `pullstack.tmpfiles.conf` | Daily sweep: work folders after 1 day, reports after 30 |
 
 ## Limits
 

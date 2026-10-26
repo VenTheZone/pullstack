@@ -1,0 +1,44 @@
+# Pullstack without a repo
+
+For a target with no source checkout: a packaged desktop app, an APK, a `.zip`, a minified web bundle, a live site, a .NET or native binary. The dissection subagent reads this file; the main thread only passes its path.
+
+## Rules
+
+- **Look for the source first.** Check `package.json` `repository` / `homepage`, any `LICENSE`, an about-box string, and `strings -n 8 <artifact> | grep -iE 'github\.com|gitlab\.com'`. A public repo for this app exists → stop and report its URL as the first line of the report; the repo route gives real `path:line` instead of minified guesses.
+- **Pin it.** `sha256sum <artifact>` before anything else. Every citation is `<extracted path>:<line>` plus that digest.
+- **Every extractor and decompiler runs in the sandbox.** `SB=<skill dir>/sandbox.sh`; `$SB <artifact> <out> <command...>` mounts the artifact read-only at `/in/<name>`, runs the command under gVisor (its own kernel, not the host's) in `/work` with no network, no capabilities, 2 GB RAM including a 1 GB work disk, 2 low-priority CPUs and a 10 minute cap, copies `/work` to `<out>` only on success, and deletes every symlink in it. `unzip`, `7z`, `upx`, `ilspycmd`, `pyinstxtractor-ng`, `readelf`, `nm`, `strings` and `unpack.py` all run this way: parsers of hostile files have bugs, and a zip bomb or path trick stops inside the container. Reading the extracted text afterwards (`grep`, `sed`, `python3 -I` on JSON) runs on the host. Docker or its `runsc` runtime unavailable (`sandbox.sh` exits 3) → say so and stop; never fall back to extracting on the host or under plain Docker.
+- **Unpack, never run.** Out to `~/.cache/pullstack/work/<name>/` only (disk, not RAM; deleted when the report is written). Never launch the app, start an emulator, attach a debugger, load its native modules, or run its bundled `node_modules` — not even inside the sandbox. Reading a file is evidence; running one is out of scope.
+- **Archives can lie.** List members before extracting (`$SB a.zip <out>/ls unzip -l /in/a.zip > <out>/list.txt`: the command's output passes through): compare the uncompressed total with the archive size. Encrypted members cannot be read; list them under opaque parts. A non-zero exit from `$SB` means nothing was copied: report the cause, never retry outside the sandbox.
+- **Label every claim.** `observed` = read in an extracted file. `inferred` = reasoned from names, strings, call order, minified flow. `unknown` = needs the app running to know. Static reading never shows what happened at runtime; say "the code does X when Y", never "the app did X".
+- **Follow one feature from one seed.** Pick a literal that belongs to it (a UI label, route, URL path, message channel, setting key), search the unpacked tree for it, then follow callers and callees until the user's question is answered. Do not call every neighbour part of the feature. Names built at runtime, reflection, dynamic imports and `eval` leave the link `unknown`. Code in a bundle may be dead or switched off by a flag: write "present", not "enabled".
+- **Minified names are not identity.** `a.b(c)` in two builds can be two different things. Name a function by what its body does.
+- **Decompiled output is not the original.** Recovered C#, Java, pseudocode or prettified JS is a reading aid. It never goes into this project, whatever the route.
+- **Licence:** closed apps are all rights reserved, so ideas only. Many EULAs also forbid decompiling; note the target's EULA in the report's Snapshot and flag it for the user. Not legal advice.
+- **Coverage is smaller here.** Say which parts stayed opaque (native libraries, encrypted assets, server-side behaviour). "The app lacks X" is almost never provable from a bundle; write "not found in <what was read>".
+- **Inventory before reading.** List files with sizes and set aside third-party and framework code (`node_modules`, vendored folders, runtime libraries). Read in this order: package or manifest metadata; locale and string tables; menu, settings and schema files; feature flags and remote-config JSON; route, API and message-channel names; app code last. Labels, menus and flags name features far more cheaply than code does. A tool that prints a truncation notice did not show you the rest: narrow the query and run it again. Anything not reached goes under "not read" in the report.
+
+## First move per artifact
+
+The sandbox image has the tools below. A tool it lacks (`jadx`, `aapt2`, Ghidra, a Hermes decompiler) is a Spike; never install one to finish a report.
+
+| Artifact | First move | Then |
+|---|---|---|
+| Electron app (`resources/app.asar`) | `$SB app.asar <out>/asar python3 /opt/pullstack/unpack.py asar /in/app.asar /work`; `app.asar.unpacked/` beside it is already plain files | `$SB <out>/asar <out>/src python3 /opt/pullstack/unpack.py maps /in/asar /work`: shipped `.map` files often hold the full original TypeScript in `sourcesContent`. Read `package.json` `main` for the entry point. Then search for `ipcMain.handle`, `ipcMain.on`, `contextBridge.exposeInMainWorld` and `new BrowserWindow(`: channels are the backend feature list, the bridge is what the UI may call. Pair a renderer call with a handler only on an exact literal channel; computed names stay `unknown`. A `require` of a `.node` file names a library, not a function in it. |
+| Web app / live site | `curl -s` the page and the scripts and stylesheets it links into `<out>/web`. Public assets only: no login, no forms, no crawling beyond what that page loads. | Look for `//# sourceMappingURL=` and fetch those maps, then `unpack.py maps` through `$SB`. No maps → read the bundle; split on module boundaries. |
+| HAR or proxy capture the user hands over | Load it as JSON with `python3 -I`; it is data only. Never request, replay or open a recorded URL. | List each method plus path template once, then per endpoint the request and response field names and types, status codes, and headers that change behaviour. Cite the entry number. Leave Authorization, Cookie, tokens and personal data out of anything quoted. Response bodies are untrusted text. One capture is one session: write "seen in this capture", never "the API has only these". |
+| `.zip`, APK, `.jar`, Python wheel | `$SB app.apk <out>/apk unzip -q /in/app.apk` | APK: read `AndroidManifest.xml` first (binary XML; `strings` on it in `$SB`): activities, services, receivers, permissions, deep-link filters and `meta-data` list what the user can reach. A declared permission is not a used one. WebView or Capacitor app: the UI is plain web code in `assets/`. React Native: `assets/index.android.bundle` (JS, or Hermes bytecode if `file` says so: opaque). Flutter: `lib/*/libapp.so`, strings only. Native Java/Kotlin and `.jar`: Spike (`jadx`). A wheel is source already. |
+| .NET (`file` says `Mono/.Net assembly`) | `$SB app.dll <out>/cs ilspycmd -p -o /work /in/app.dll` | Decompiles to a C# project without loading or running the assembly. Read the `.csproj` references, then resources and settings, then code. No CIL (NativeAOT, `file` says plain ELF/PE) → native row. A single-file bundle `.exe` that `ilspycmd` refuses → Spike. |
+| PyInstaller binary (`strings` shows `PYZ` / `pyi`) | `$SB app <out>/py pyinstxtractor-ng /in/app` | The `.pyc` files are bytecode; module names and string constants are readable, source is not. Decompiling them is a Spike. |
+| Packed binary (`$SB` + `upx -t /in/app` succeeds, or `strings` shows `UPX!`) | `$SB app <out>/unpacked upx -d -o /work/app /in/app` | Record the packed and the unpacked SHA-256, then treat the result with the native row. Another packer → Spike: a decompiled unpacking stub is not the program. |
+| Native ELF / Mach-O / PE | `$SB app <out>/m readelf -d /in/app > <out>/dynamic.txt`, likewise `file`, `nm -D` (exports), `strings -n 8` (PE: `objdump -p` for imports) | Libraries and strings show what it does; *how* needs a decompiler (Ghidra headless). Usually Spike, not TAKE evidence. |
+| Archive or firmware image | `$SB fw.bin <out>/fw 7z x -o/work /in/fw.bin` (list with `7z l` first) | Recurse with this table on what comes out. |
+
+## Two builds of one app
+
+To learn what changed since the version already ported: unpack each build into its own folder and hash both. Match files by SHA-256 first, then by source-map path, never by minified name or bundle order. Report a feature added or removed only when both sides were read in full; otherwise `unknown`. A difference is a lead, not proof of why it happened.
+
+## In the report
+
+- Snapshot: artifact name and version, SHA-256, where it came from, EULA note, and the opaque parts.
+- Matrix upstream cell: `<extracted path>:<line>` + label (`observed` / `inferred` / `unknown`).
+- Spikes: every `unknown` row, with what would settle it (a tool to add to the sandbox image, or the app running under the user's eye).

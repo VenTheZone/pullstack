@@ -1,3 +1,10 @@
+<p align="center">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="assets/logo-dark.svg">
+    <img src="assets/logo.svg" width="360" alt="A smug blob pulls a block out of someone else's tower and adds it to its own">
+  </picture>
+</p>
+
 # pullstack
 
 A universal agent skill that takes the best features from another project and rebuilds them in yours. Point it at a repository, or at an app with no repo at all (an Electron bundle, an APK, a .NET binary, a website), and it tells you what that project does that yours doesn't, with evidence. You pick what to take. It then plans and builds it in your project's own style.

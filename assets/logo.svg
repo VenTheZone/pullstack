@@ -1,0 +1,46 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 110 512 400" width="512" height="400">
+  <defs>
+    <filter id="ink" x="-5%" y="-5%" width="110%" height="110%">
+      <feTurbulence type="fractalNoise" baseFrequency="0.02" numOctaves="2" seed="7"/>
+      <feDisplacementMap in="SourceGraphic" scale="3"/>
+    </filter>
+    <pattern id="hole" width="8" height="8" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><rect width="3" height="8" fill="#111"/></pattern>
+  </defs>
+  <g filter="url(#ink)" fill="#fff" stroke="#111" stroke-width="8" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M20 476 Q140 471 256 477 T492 475" fill="none"/>
+    <g transform="rotate(-4 96 476)">
+      <rect x="36" y="446" width="120" height="30"/>
+      <rect x="36" y="416" width="40" height="30"/><rect x="76" y="416" width="40" height="30"/><rect x="116" y="416" width="40" height="30"/>
+      <rect x="36" y="386" width="120" height="30"/>
+      <rect x="36" y="356" width="40" height="30"/><rect x="76" y="356" width="40" height="30"/><rect x="116" y="356" width="40" height="30"/>
+      <rect x="36" y="326" width="120" height="30"/>
+      <rect x="36" y="296" width="40" height="30"/><rect x="116" y="296" width="40" height="30"/><rect x="76" y="296" width="40" height="30" fill="url(#hole)"/>
+      <rect x="36" y="266" width="120" height="30"/>
+      <rect x="36" y="236" width="40" height="30"/><rect x="76" y="236" width="40" height="30"/><rect x="116" y="236" width="40" height="30"/>
+      <rect x="36" y="206" width="120" height="30"/>
+      <rect x="36" y="176" width="40" height="30"/><rect x="76" y="176" width="40" height="30"/><rect x="116" y="176" width="40" height="30"/>
+    </g>
+    <path d="M152 168 Q162 182 154 198 M166 160 Q180 182 168 206" fill="none" stroke-width="6"/>
+    <rect x="356" y="446" width="120" height="30"/>
+    <rect x="356" y="416" width="40" height="30"/><rect x="396" y="416" width="40" height="30"/><rect x="436" y="416" width="40" height="30"/>
+    <rect x="356" y="386" width="120" height="30"/>
+    <path d="M226 418 L220 472 M274 418 L280 472" fill="none"/>
+    <path d="M206 474 L222 474 M278 474 L294 474" fill="none" stroke-width="10"/>
+    <path d="M196 362 Q168 388 190 406" fill="none"/>
+    <circle cx="250" cy="360" r="62"/>
+    <path d="M218 341 L246 341 M262 341 L290 341" fill="none"/>
+    <circle cx="240" cy="349" r="5" fill="#111" stroke="none"/><circle cx="284" cy="349" r="5" fill="#111" stroke="none"/>
+    <path d="M218 326 Q232 314 246 321 M262 330 L290 325" fill="none" stroke-width="6"/>
+    <path d="M232 386 Q262 404 292 376" fill="none"/>
+    <path d="M318 296 Q310 310 318 316 Q326 310 318 296 Z" stroke-width="5"/>
+    <path d="M306 350 Q350 330 394 330" fill="none"/>
+    <g transform="rotate(10 416 320)">
+      <rect x="396" y="300" width="40" height="30"/>
+    </g>
+    <circle cx="396" cy="330" r="9"/>
+  </g>
+  <g fill="#111">
+    <circle cx="62" cy="130" r="4"/><circle cx="330" cy="250" r="3"/><circle cx="470" cy="300" r="5"/>
+    <ellipse cx="190" cy="140" rx="7" ry="3"/><circle cx="440" cy="190" r="3"/><ellipse cx="310" cy="496" rx="6" ry="3"/>
+  </g>
+</svg>

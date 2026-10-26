@@ -115,3 +115,7 @@ Work happens in `~/.cache/pullstack/work/`, and reports land in `~/.cache/pullst
 - It only reads. Questions that need the app running stay `unknown` in the report.
 - The sandbox image has no `jadx`, `aapt2`, Ghidra or Hermes decompiler. Native Android Java/Kotlin, binary Android manifests, native decompiling and React Native Hermes bundles come back as open questions.
 - "This app lacks X" can almost never be proven from a bundle. Reports say "not found in what was read".
+
+## License
+
+MIT. See `LICENSE`.

@@ -4,6 +4,15 @@ A universal agent skill that takes the best features from another project and re
 
 The other project is only ever read, never run.
 
+## Skills
+
+| Skill | Say | Does |
+|---|---|---|
+| `pullstack` | "pullstack <repo or app>", "take features from X" | Compares X with your project, ranks what's worth taking, waits for your pick, then plans and builds it |
+| `pullstack-update` | "X shipped v2, anything new?" | Reports only what changed in X since the version you ported from |
+| `pullstack-check` | "did this branch copy from X?" | Finds lines copied word for word and checks the licence and attribution |
+| `pullstack-help` | "pullstack help" | A one-screen reference card |
+
 ## Why
 
 Ask an agent to "take the good parts of X" and it usually gets the comparison roughly right. What it gets wrong is the part you act on. In the test runs that shaped this skill, an agent without it:
@@ -28,7 +37,7 @@ It did catch the licence that time (AGPL into a closed project). Nothing made it
 
 With a repo, you give it a URL or a path and it compares source with source.
 
-Without one, you give it the artifact and it follows `artifact-route.md`:
+Without one, you give it the artifact and it follows `references/artifact-route.md`:
 
 | Artifact | How it is opened |
 |---|---|
@@ -46,7 +55,7 @@ Every claim in a no-repo report is labelled `observed` (read in a file), `inferr
 
 ## Safety
 
-Every extractor and decompiler runs through `sandbox.sh`, inside a throwaway container on the [gVisor](https://gvisor.dev) runtime. gVisor gives the container its own kernel rather than sharing yours. Each run gets:
+Every extractor and decompiler runs through `scripts/sandbox.sh`, inside a throwaway container on the [gVisor](https://gvisor.dev) runtime. gVisor gives the container its own kernel rather than sharing yours. Each run gets:
 
 - no network and no Linux capabilities
 - a read-only image, with the artifact mounted read-only
@@ -55,7 +64,7 @@ Every extractor and decompiler runs through `sandbox.sh`, inside a throwaway con
 
 If Docker or gVisor is missing, the skill stops. It never falls back to extracting on your machine.
 
-Tested against:
+Tested against, and repeatable with `sh skills/pullstack/scripts/selftest.sh`:
 - a 3 GiB zip bomb: stopped inside the container, nothing copied out
 - `../` path traversal: kept inside the output folder
 - a symlink pointing at `~/.ssh`: deleted
@@ -77,15 +86,12 @@ Tested against:
 ## Install
 
 ```bash
-git clone https://github.com/VenTheZone/pullstack.git ~/.agents/skills/pullstack
+npx skills add VenTheZone/pullstack -g
 ```
 
-Many agents read skills from `~/.agents/skills`. If yours uses a different folder, clone into that one instead. The skill is self-contained and needs no other skills.
+That uses the [skills CLI](https://github.com/vercel-labs/skills). To install by hand, copy the four folders in `skills/` into your agent's skills folder and keep them side by side. [INSTALL.md](INSTALL.md) has both, plus the sandbox setup.
 
-### Requirements
-
-- `git` and `python3`
-- For the no-repo route: Docker with the gVisor `runsc` runtime ([install guide](https://gvisor.dev/docs/user_guide/install)). gVisor runs on Linux hosts only, so on other systems the repo route works and the no-repo route stops with a message. The sandbox image (`pullstack-sandbox:1`, about 950 MB) builds itself on first use.
+You need `git` and `python3`. Targets with no repo also need Docker with the gVisor `runsc` runtime, which only runs on Linux hosts. Without it, repo targets still work and no-repo targets stop with a message.
 
 ## Usage
 
@@ -99,16 +105,24 @@ what does owner/project have that we don't?
 
 Work happens in `~/.cache/pullstack/work/`, and reports land in `~/.cache/pullstack/reports/`.
 
-## Files
+## Layout
 
-| File | Purpose |
-|---|---|
-| `SKILL.md` | The skill: steps, licence routes, dissection brief, common mistakes |
-| `artifact-route.md` | The no-repo method, read only by the dissection subagent |
-| `build.md` | Plan format, build loop with per-task review, and the copy check |
-| `sandbox.sh` | Runs one extraction command in the gVisor container |
-| `Dockerfile` | The sandbox image: unzip, 7z, UPX (checksum-pinned), binutils, `ilspycmd`, `pyinstxtractor-ng` |
-| `unpack.py` | Standard-library extractor for `app.asar` and source maps; refuses any path that would land outside the output folder |
+```
+skills/
+  pullstack/
+    SKILL.md                    the main skill: steps, licence routes, dissection brief
+    references/
+      artifact-route.md         the no-repo method, read by the dissection subagent
+      build.md                  plan format, build loop with review, copy check
+    scripts/
+      sandbox.sh                runs one extraction command in the gVisor container
+      Dockerfile                the sandbox image (unzip, 7z, UPX, binutils, ilspycmd, pyinstxtractor-ng)
+      unpack.py                 app.asar and source-map extractor; refuses paths outside its output
+      selftest.sh               hostile-input tests for the sandbox
+  pullstack-update/SKILL.md     uses ../pullstack
+  pullstack-check/SKILL.md      uses ../pullstack
+  pullstack-help/SKILL.md
+```
 
 ## Limits
 
